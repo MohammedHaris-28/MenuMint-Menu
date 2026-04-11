@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Playfair+Display:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 220 20% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 10%;
+
+    --primary: 160 60% 20%;
+    --primary-foreground: 60 20% 98%;
+
+    --secondary: 210 15% 95%;
+    --secondary-foreground: 220 20% 10%;
+
+    --muted: 210 15% 95%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 38 92% 50%;
+    --accent-foreground: 220 20% 10%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 160 60% 20%;
+
+    --radius: 0.75rem;
+
+    --success: 152 60% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --font-display: 'Playfair Display', serif;
+    --font-body: 'DM Sans', sans-serif;
+
+    --shadow-card: 0 1px 3px 0 hsl(220 20% 10% / 0.04), 0 1px 2px -1px hsl(220 20% 10% / 0.04);
+    --shadow-card-hover: 0 10px 25px -5px hsl(220 20% 10% / 0.08), 0 4px 10px -3px hsl(220 20% 10% / 0.04);
+    --shadow-float: 0 20px 40px -10px hsl(220 20% 10% / 0.15);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .font-body {
+    font-family: var(--font-body);
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-card-hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+  .shadow-float {
+    box-shadow: var(--shadow-float);
+  }
+}
+
+@layer components {
+  .menu-card {
+    @apply bg-card rounded-xl shadow-card transition-all duration-200 ease-out;
+  }
+  .menu-card:hover {
+    @apply shadow-card-hover;
+    transform: translateY(-2px);
+  }
+  .menu-card-disabled {
+    @apply opacity-50 pointer-events-none;
+  }
+  .category-tab {
+    @apply px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap;
+  }
+  .category-tab-active {
+    @apply bg-primary text-primary-foreground;
+  }
+  .category-tab-inactive {
+    @apply bg-secondary text-muted-foreground hover:bg-secondary/80;
+  }
+  .fab-button {
+    @apply flex items-center gap-2 px-4 py-3 rounded-full shadow-float transition-all duration-200 hover:scale-105 active:scale-95 text-sm font-medium;
+  }
+  .badge-table {
+    @apply bg-accent/15 text-accent px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+  .add-button {
+    @apply bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150 active:scale-95 hover:opacity-90;
+  }
+  .status-available {
+    @apply text-success;
+  }
+  .status-unavailable {
+    @apply text-destructive;
+  }
+}
