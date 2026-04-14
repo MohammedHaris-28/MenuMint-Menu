@@ -14,7 +14,7 @@ import { toast } from "sonner";
 
 const Index = () => {
   // TEMP TEST MODE
-const tableId = "95db3f51-7747-4d1f-868b-5727219bf89a";
+const { tableId } = useParams();
 
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -32,9 +32,12 @@ const tableId = "95db3f51-7747-4d1f-868b-5727219bf89a";
   const cart = useCart();
 
   // 🔥 LOAD EVERYTHING
-  useEffect(() => {
-    const loadData = async () => {
-      if (!tableId) return;
+ useEffect(() => {
+  const loadData = async () => {
+    if (!tableId) {
+      setInvalidTable(true);
+      return;
+    }
 
       setLoading(true);
 
