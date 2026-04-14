@@ -6,8 +6,8 @@ interface MenuHeaderProps {
   onSearchChange: (q: string) => void;
   cartCount: number;
   onCartClick: () => void;
-  tableNumber?: string;
-  restaurant?: any;
+  table?: any;
+restaurant?: any;
 }
 
 const MenuHeader = ({ 
@@ -15,7 +15,8 @@ const MenuHeader = ({
   onSearchChange, 
   cartCount, 
   onCartClick, 
-  tableNumber = "07" 
+  table,
+  restaurant
 }: MenuHeaderProps) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -36,12 +37,12 @@ const MenuHeader = ({
           
           <div className={`flex flex-col transition-opacity duration-300 ${isSearchOpen ? 'hidden xs:flex' : 'flex'}`}>
             <span className="text-[17px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100 leading-tight">
-              Saveur
+               {restaurant?.name || "Restaurant"}
             </span>
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-                Table {tableNumber}
+               {table?.name || `Table ${table?.table_number || "--"}`}
               </span>
             </div>
           </div>

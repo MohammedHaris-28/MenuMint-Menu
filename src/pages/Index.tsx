@@ -19,7 +19,7 @@ const { tableId } = useParams();
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [restaurant, setRestaurant] = useState<any>(null);
-
+  const [table, setTable] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [invalidTable, setInvalidTable] = useState(false);
 
@@ -32,72 +32,71 @@ const { tableId } = useParams();
   const cart = useCart();
 
   // 🔥 LOAD EVERYTHING
- useEffect(() => {
+useEffect(() => {
   const loadData = async () => {
     if (!tableId) {
       setInvalidTable(true);
       return;
     }
 
-      setLoading(true);
+    setLoading(true);
 
-      try {
-        // 1️⃣ Validate table
-        const { data: table, error: tableError } = await supabase
-          .from("tables")
-          .select("*")
-          .eq("id", tableId)
-          .single();
+    try {
+      // 1️⃣ Validate table
+      const { data: tableData, error: tableError } = await supabase
+        .from("tables")
+        .select("*")
+        .eq("id", tableId)
+        .single();
 
-        if (tableError || !table) {
-          setInvalidTable(true);
-          return;
-        }
-
-        const restaurantId = table.restaurant_id;
-
-        // 2️⃣ Fetch everything in parallel
-        const [menuRes, restRes] = await Promise.all([
-          supabase
-            .from("menu_categories")
-            .select(`
-              *,
-              menu_items(*)
-            `)
-            .eq("restaurant_id", restaurantId),
-
-          supabase
-            .from("restaurants")
-            .select("*")
-            .eq("id", restaurantId)
-            .single()
-        ]);
-
-        if (menuRes.error) throw menuRes.error;
-
-        // Flatten items
-        const allItems =
-          menuRes.data?.flatMap((cat: any) =>
-            cat.menu_items.map((item: any) => ({
-              ...item,
-              category_id: cat.id,
-              category_name: cat.name,
-            }))
-          ) || [];
-
-        setCategories(menuRes.data || []);
-        setMenuItems(allItems);
-        setRestaurant(restRes.data);
-
-      } catch (err: any) {
-        toast.error(err.message || "Failed to load menu");
-      } finally {
-        setLoading(false);
+      if (tableError || !tableData) {
+        setInvalidTable(true);
+        return;
       }
-    };
 
-    loadData();
-  }, [tableId]);
+      // ✅ IMPORTANT FIX
+      setTable(tableData);
+
+      const restaurantId = tableData.restaurant_id;
+
+      // 2️⃣ Fetch everything
+      const [menuRes, restRes] = await Promise.all([
+        supabase
+          .from("menu_categories")
+          .select(`*, menu_items(*)`)
+          .eq("restaurant_id", restaurantId),
+
+        supabase
+          .from("restaurants")
+          .select("*")
+          .eq("id", restaurantId)
+          .single()
+      ]);
+
+      if (menuRes.error) throw menuRes.error;
+
+      const allItems =
+        menuRes.data?.flatMap((cat: any) =>
+          cat.menu_items.map((item: any) => ({
+            ...item,
+            category_id: cat.id,
+            category_name: cat.name,
+          }))
+        ) || [];
+
+      setCategories(menuRes.data || []);
+      setMenuItems(allItems);
+      setRestaurant(restRes.data);
+
+    } catch (err: any) {
+      toast.error(err.message || "Failed to load menu");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadData();
+}, [tableId]);
 
   // 🔥 FILTER
   const filteredItems = useMemo(() => {
@@ -117,7 +116,7 @@ const { tableId } = useParams();
   if (invalidTable) {
     return (
       <div className="h-screen flex items-center justify-center">
-        <p className="text-red-500 text-lg">Invalid QR Code</p>
+        <p className="text-red-500 text-lg">Invalid QR Code. Please contact staff.</p>
       </div>
     );
   }
@@ -138,13 +137,14 @@ const { tableId } = useParams();
     <div className="min-h-screen bg-background pb-28">
 
       {/* 🔥 HEADER WITH RESTAURANT */}
-      <MenuHeader
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        cartCount={cart.totalItems}
-        onCartClick={() => setCartOpen(true)}
-        restaurant={restaurant}
-      />
+     <MenuHeader
+  searchQuery={searchQuery}
+  onSearchChange={setSearchQuery}
+  cartCount={cart.totalItems}
+  onCartClick={() => setCartOpen(true)}
+  restaurant={restaurant}
+  table={table}
+/>
 
       <main className="container max-w-6xl mx-auto px-4">
 
