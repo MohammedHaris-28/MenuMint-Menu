@@ -30,7 +30,7 @@ const CartDrawer = ({
 }: CartDrawerProps) => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
-  // Bill Calculations
+  // Bill Calculations for UI Display
   const taxPercentage = 5; 
   const subtotal = totalPrice;
   const taxAmount = (subtotal * taxPercentage) / 100;
@@ -51,15 +51,11 @@ const CartDrawer = ({
     setIsPlacingOrder(true);
 
     try {
-      /**
-       * CRITICAL TIME FIX:
-       * We generate the ISO string here. It will look like: 2026-04-10T13:29:57Z
-       * The 'Z' or '+00' tells Supabase and your Admin Dashboard exactly 
-       * when the order happened relative to global time.
-       */
       const orderTimestamp = new Date().toISOString();
 
       // 1. Insert Parent Order
+      // FIX: We send the raw subtotal as the 'total' because the Admin 
+      // Dashboard/Backend will handle tax calculations to avoid double-taxing.
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -67,11 +63,11 @@ const CartDrawer = ({
           table_id: tableId,
           status: "pending",
           subtotal: subtotal,
-          cgst: cgst,
-          sgst: sgst,
-          total: totalAmount,
+          cgst: 0, // Set to 0 as dashboard handles it
+          sgst: 0, // Set to 0 as dashboard handles it
+          total: subtotal, // Sending only item total
           tax_percentage: taxPercentage,
-          created_at: orderTimestamp, // Injected timestamp
+          created_at: orderTimestamp,
         })
         .select()
         .single();
@@ -92,7 +88,6 @@ const CartDrawer = ({
         .insert(orderItems);
 
       if (itemsError) {
-        // Safety: If items fail, remove the empty parent order
         await supabase.from("orders").delete().eq("id", order.id);
         throw itemsError;
       }
@@ -181,7 +176,7 @@ const CartDrawer = ({
                 ))}
               </div>
 
-              {/* Bill Summary */}
+              {/* Bill Summary (Displaying taxes to user only) */}
               <div className="bg-zinc-50 rounded-[2rem] p-5 border border-zinc-100">
                 <div className="flex items-center gap-2 mb-4 text-zinc-800">
                   <ReceiptText className="w-4 h-4 text-orange-500" />
@@ -194,7 +189,7 @@ const CartDrawer = ({
                     <span>₹{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm text-zinc-500">
-                    <span>Taxes (5%)</span>
+                    <span>Taxes ({taxPercentage}%)</span>
                     <span>₹{taxAmount.toFixed(2)}</span>
                   </div>
                   <div className="pt-3 border-t border-dashed border-zinc-200 flex justify-between items-center">
@@ -235,6 +230,7 @@ const CartDrawer = ({
                   </div>
                   <div className="h-8 w-[1px] bg-white/20 mx-2" />
                   <div className="flex items-center gap-1">
+                    {/* Still showing full amount to user for transparency */}
                     <span className="text-lg">₹{totalAmount.toFixed(2)}</span>
                     <ChevronRight className="w-5 h-5" />
                   </div>
