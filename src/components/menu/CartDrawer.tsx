@@ -1,4 +1,4 @@
-import { X, Plus, Minus, ShoppingBag, Loader2, ReceiptText, ChevronRight } from "lucide-react";
+import { X, Plus, Minus, ShoppingBag, Loader2, ReceiptText, ChevronRight, Package } from "lucide-react";
 import type { CartItem } from "@/hooks/useCart";
 import { getMenuImageUrl } from "@/data/menuData";
 import { toast } from "sonner";
@@ -30,13 +30,11 @@ const CartDrawer = ({
 }: CartDrawerProps) => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
-  // Bill Calculations for UI Display
+  // Bill Calculations
   const taxPercentage = 5; 
   const subtotal = totalPrice;
   const taxAmount = (subtotal * taxPercentage) / 100;
   const totalAmount = subtotal + taxAmount;
-  const cgst = taxAmount / 2;
-  const sgst = taxAmount / 2;
 
   if (!open) return null;
 
@@ -54,8 +52,6 @@ const CartDrawer = ({
       const orderTimestamp = new Date().toISOString();
 
       // 1. Insert Parent Order
-      // FIX: We send the raw subtotal as the 'total' because the Admin 
-      // Dashboard/Backend will handle tax calculations to avoid double-taxing.
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -63,9 +59,9 @@ const CartDrawer = ({
           table_id: tableId,
           status: "pending",
           subtotal: subtotal,
-          cgst: 0, // Set to 0 as dashboard handles it
-          sgst: 0, // Set to 0 as dashboard handles it
-          total: subtotal, // Sending only item total
+          cgst: 0, 
+          sgst: 0, 
+          total: subtotal, 
           tax_percentage: taxPercentage,
           created_at: orderTimestamp,
         })
@@ -74,10 +70,13 @@ const CartDrawer = ({
 
       if (orderError) throw orderError;
 
-      // 2. Prepare Order Items
+      // 2. Prepare Order Items (Handling both standard items and combos)
       const orderItems = items.map((item) => ({
         order_id: order.id,
-        menu_item_id: item.id,
+        // If it's a combo, we might store it in a different column or use a metadata field
+        // depending on your schema. Standard approach:
+        menu_item_id: (item as any).included_items ? null : item.id,
+        combo_id: (item as any).included_items ? item.id : null,
         quantity: item.quantity,
         price: item.price,
       }));
@@ -106,7 +105,6 @@ const CartDrawer = ({
 
   return (
     <>
-      {/* Backdrop */}
       <div 
         className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] transition-opacity" 
         onClick={onClose} 
@@ -114,69 +112,89 @@ const CartDrawer = ({
 
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[2.5rem] shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[95vh] flex flex-col border-t border-zinc-100">
         
-        {/* Aesthetic Handle */}
         <div className="flex justify-center pt-4 pb-1">
           <div className="w-10 h-1 rounded-full bg-zinc-200" />
         </div>
 
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-50">
           <div>
             <h2 className="font-extrabold text-2xl text-zinc-900 flex items-center gap-2">
-              My Cart <span className="text-sm font-medium bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">{items.length} items</span>
+              My Cart <span className="text-sm font-medium bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">{items.length}</span>
             </h2>
             <p className="text-xs text-zinc-400 font-medium mt-0.5 uppercase tracking-widest">
               Table Order
             </p>
           </div>
-          <button 
-            onClick={onClose} 
-            className="p-2 rounded-full bg-zinc-100 text-zinc-500 transition-colors active:bg-zinc-200"
-          >
+          <button onClick={onClose} className="p-2 rounded-full bg-zinc-100 text-zinc-500">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 scrollbar-hide">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <div className="w-20 h-20 bg-zinc-50 rounded-full flex items-center justify-center mb-4">
-                <ShoppingBag className="w-10 h-10 text-zinc-200" />
-              </div>
+              <ShoppingBag className="w-12 h-12 text-zinc-200 mb-2" />
               <p className="text-zinc-400 font-medium">Your cart is empty</p>
             </div>
           ) : (
             <>
-              {/* Items List */}
-              <div className="space-y-4">
-                {items.map((item) => (
-                  <div key={item.id} className="flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2">
-                    <img
-                      src={getMenuImageUrl(item.image_url || (item as any).image)}
-                      alt={item.name}
-                      className="w-16 h-16 rounded-2xl object-cover border border-zinc-100 shadow-sm"
-                    />
-                    
-                    <div className="flex-1">
-                      <h4 className="text-sm font-bold text-zinc-800 line-clamp-1">{item.name}</h4>
-                      <p className="text-sm font-extrabold text-zinc-900 mt-0.5">₹{item.price.toFixed(2)}</p>
+              <div className="space-y-6">
+                {items.map((item) => {
+                  const isCombo = !!(item as any).included_items;
+                  
+                  return (
+                    <div key={item.id} className="flex items-start gap-4">
+                      {/* Image with Combo Badge */}
+                      <div className="relative flex-shrink-0">
+                        <img
+                          src={getMenuImageUrl(item.image_url || (item as any).image)}
+                          alt={item.name}
+                          className="w-20 h-20 rounded-2xl object-cover border border-zinc-100"
+                        />
+                        {isCombo && (
+                          <div className="absolute -top-2 -right-2 bg-orange-500 text-white p-1 rounded-lg shadow-lg">
+                            <Package className="w-3 h-3" />
+                          </div>
+                        )}
+                      </div>
                       
-                      <div className="flex items-center gap-3 mt-2 bg-zinc-50 w-fit px-2 py-1 rounded-xl border border-zinc-100">
-                        <button onClick={() => onRemove(item.id)} className="hover:text-orange-600"><Minus className="w-3 h-3" /></button>
-                        <span className="text-xs font-bold min-w-[14px] text-center">{item.quantity}</span>
-                        <button onClick={() => onAdd(item)} className="hover:text-orange-600"><Plus className="w-3 h-3" /></button>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-bold text-zinc-800 flex items-center gap-2">
+                          {item.name}
+                        </h4>
+                        
+                        {/* If Combo, show small list of contents */}
+                        {isCombo && (
+                          <p className="text-[10px] text-zinc-400 font-medium mt-1 line-clamp-1">
+                            {(item as any).included_items.map((i: any) => i.name).join(" + ")}
+                          </p>
+                        )}
+
+                        <p className="text-sm font-extrabold text-zinc-900 mt-1 italic">
+                          ₹{item.price.toFixed(2)}
+                        </p>
+                        
+                        <div className="flex items-center gap-3 mt-3 bg-zinc-50 w-fit px-3 py-1.5 rounded-xl border border-zinc-100">
+                          <button onClick={() => onRemove(item.id)} className="text-zinc-400 hover:text-orange-600">
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-sm font-bold min-w-[14px] text-center">{item.quantity}</span>
+                          <button onClick={() => onAdd(item)} className="text-zinc-400 hover:text-orange-600">
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                        <p className="text-sm font-black text-zinc-900">
+                          ₹{(item.price * item.quantity).toFixed(2)}
+                        </p>
                       </div>
                     </div>
-                    
-                    <div className="text-right">
-                      <p className="text-sm font-black text-zinc-900">₹{(item.price * item.quantity).toFixed(2)}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
-              {/* Bill Summary (Displaying taxes to user only) */}
               <div className="bg-zinc-50 rounded-[2rem] p-5 border border-zinc-100">
                 <div className="flex items-center gap-2 mb-4 text-zinc-800">
                   <ReceiptText className="w-4 h-4 text-orange-500" />
@@ -198,24 +216,16 @@ const CartDrawer = ({
                   </div>
                 </div>
               </div>
-
-              <div className="pb-4">
-                <p className="text-[10px] text-center text-zinc-400 font-medium leading-relaxed uppercase tracking-wider">
-                  Kitchen will begin preparing <br /> 
-                  your food immediately.
-                </p>
-              </div>
             </>
           )}
         </div>
 
-        {/* Footer Action */}
         {items.length > 0 && (
           <div className="p-6 bg-white border-t border-zinc-100 pb-10">
             <button
               onClick={handlePlaceOrder}
               disabled={isPlacingOrder}
-              className="w-full bg-zinc-900 text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all active:scale-95 disabled:bg-zinc-300 shadow-xl shadow-zinc-200"
+              className="w-full bg-zinc-900 text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95 disabled:bg-zinc-300"
             >
               {isPlacingOrder ? (
                 <>
@@ -230,8 +240,7 @@ const CartDrawer = ({
                   </div>
                   <div className="h-8 w-[1px] bg-white/20 mx-2" />
                   <div className="flex items-center gap-1">
-                    {/* Still showing full amount to user for transparency */}
-                    <span className="text-lg">₹{totalAmount.toFixed(2)}</span>
+                    <span className="text-lg font-black">₹{totalAmount.toFixed(2)}</span>
                     <ChevronRight className="w-5 h-5" />
                   </div>
                 </>

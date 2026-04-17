@@ -6,6 +6,7 @@ interface MenuCardProps {
   item: MenuItem;
   onAdd: (item: MenuItem) => void;
   view: "grid" | "list";
+  isCombo?: boolean; //
 }
 
 const MenuCard = ({ item, onAdd, view }: MenuCardProps) => {
